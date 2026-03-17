@@ -375,6 +375,8 @@ input[type="range"] {
       <button class="tab-btn" onclick="switchTab('layouts')">Inspiration</button>
       <button class="tab-btn" onclick="switchTab('palette')">Color Palettes</button>
       <button class="tab-btn" onclick="switchTab('export')">Export</button>
+      <button class="tab-btn" onclick="switchTab('spread')">Spread Builder</button>
+      <button class="tab-btn" onclick="switchTab('collection')">Collections</button>
     </nav>
     <div class="header-actions">
       <button class="btn-sm" onclick="undo()" title="Undo">↶</button>
@@ -435,8 +437,12 @@ input[type="range"] {
       <div class="card" style="padding:20px">
         <div class="card-title"><span class="icon">⬜</span> Grid Layout</div>
         <div class="field-group g2">
-          <div><label class="field-label">Columns</label><input type="number" id="cols" value="2" min="1" max="10" oninput="calculate()"></div>
+          <div><label class="field-label" for="cols">Columns</label><input type="number" id="cols" value="2" min="1" max="10" oninput="renderColToggles();calculate()"></div>
           <div><label class="field-label">Rows</label><input type="number" id="rows" value="4" min="1" max="20" oninput="calculate()"></div>
+        </div>
+        <div style="margin-top:10px">
+          <label class="field-label">Hide columns</label>
+          <div id="colVisToggles" style="display:flex;gap:5px;flex-wrap:wrap;margin-top:5px"></div>
         </div>
         <div class="field-group g3" style="margin-top:10px">
           <div><label class="field-label">Gutter</label><input type="number" id="gutter" value="1" min="0" max="5" oninput="calculate()"></div>
@@ -607,7 +613,7 @@ input[type="range"] {
         <div class="field-group g2">
           <div>
             <label class="field-label">Box Size (dots)</label>
-            <input type="number" id="habitBoxSize" value="1" min="1" max="4" oninput="calculateHabit()">
+            <input type="number" id="habitBoxSize" value="3" min="1" max="6" oninput="calculateHabit()">
           </div>
           <div>
             <label class="field-label">Gap (dots)</label>
@@ -738,6 +744,229 @@ input[type="range"] {
     <h3>Saved Setups</h3>
     <div id="savedSetups" class="export-grid"></div>
     <div style="color:var(--ink-faint);font-size:12px;margin-top:8px" id="noSavesMsg">No saved setups yet — click "Save Setup" in the header.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     TAB 6: COLLECTIONS PLANNER
+═══════════════════════════════════════ -->
+<div id="tool-collection" class="tool-view">
+  <div class="two-col">
+    <div class="fields-col">
+
+      <div class="card" style="padding:20px">
+        <div class="card-title"><span class="icon">📋</span> Collection Setup</div>
+        <div>
+          <label class="field-label">Title</label>
+          <input type="text" id="collTitle" aria-label="Collection title" placeholder="e.g. Books to Read" oninput="calculateCollection()">
+        </div>
+        <hr class="sep">
+        <div class="field-group g2">
+          <div>
+            <label class="field-label">Columns</label>
+            <select id="collCols" onchange="calculateCollection()">
+              <option value="1">1 column</option>
+              <option value="2" selected>2 columns</option>
+              <option value="3">3 columns</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Line Spacing (dots)</label>
+            <input type="number" id="collLineSpacing" aria-label="Line spacing in dots" value="2" min="1" max="5" oninput="calculateCollection()">
+          </div>
+        </div>
+        <hr class="sep">
+        <div class="field-group g2">
+          <div>
+            <label class="field-label">Bullet Style</label>
+            <select id="collBullet" onchange="calculateCollection()">
+              <option value="dot">• Dot</option>
+              <option value="circle">○ Circle</option>
+              <option value="dash">– Dash</option>
+              <option value="checkbox">□ Checkbox</option>
+              <option value="arrow">› Arrow</option>
+              <option value="none">None</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Page Bounds</label>
+            <select id="collBounds" onchange="calculateCollection()">
+              <option value="full">Full Page</option>
+              <option value="half">Half Page</option>
+            </select>
+          </div>
+        </div>
+        <hr class="sep">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-soft);cursor:pointer">
+          <input type="checkbox" id="collShowNums" aria-label="Number the lines" onchange="calculateCollection()" style="width:auto"> Number the lines
+        </label>
+      </div>
+
+      <div class="card" style="padding:20px">
+        <div class="card-title"><span class="icon">🎨</span> Style</div>
+        <div>
+          <label class="field-label">Header Style</label>
+          <select id="collHeaderStyle" onchange="calculateCollection()">
+            <option value="plain">Plain</option>
+            <option value="underlined" selected>Underlined</option>
+            <option value="banner">Banner</option>
+          </select>
+        </div>
+        <div style="margin-top:12px">
+          <label class="field-label">Accent Color</label>
+          <div class="color-swatches" id="collColorSwatches"></div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:20px">
+        <div class="card-title"><span class="icon">📊</span> Stats</div>
+        <div id="collStats" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--ink-soft);line-height:1.9"></div>
+      </div>
+
+    </div>
+
+    <div>
+      <div class="card" style="padding:20px">
+        <div class="preview-wrap" style="min-height:480px">
+          <canvas id="collCanvas" style="max-width:100%"></canvas>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+          <button class="btn-sm" onclick="downloadCanvas('collCanvas','collection')">⬇ Download PNG</button>
+          <button class="btn-sm" onclick="copyCollSetup()">📋 Copy Setup</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     TAB 7: SPREAD BUILDER
+═══════════════════════════════════════ -->
+<div id="tool-spread" class="tool-view">
+  <div class="section-header">
+    <div class="section-title">Spread Builder</div>
+    <div class="section-sub">Combine two pages into a full spread. Content inherits settings from each tool's tab.</div>
+  </div>
+  <div style="display:grid;grid-template-columns:300px 1fr;gap:24px">
+    <div style="display:flex;flex-direction:column;gap:16px">
+
+      <div class="card" style="padding:20px">
+        <div class="card-title"><span class="icon">◧</span> Left Page</div>
+        <div style="display:flex;background:var(--paper);border:1px solid var(--paper-dark);border-radius:10px;padding:3px;gap:3px;margin-bottom:14px">
+          <button id="spreadLeftModeFull" onclick="setSpreadMode('Left','full')" style="flex:1;padding:6px;border:none;border-radius:8px;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;cursor:pointer;transition:all 0.15s;background:var(--ink);color:white">Full</button>
+          <button id="spreadLeftModeSplit" onclick="setSpreadMode('Left','split')" style="flex:1;padding:6px;border:none;border-radius:8px;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;cursor:pointer;transition:all 0.15s;background:transparent;color:var(--ink-soft)">Split</button>
+        </div>
+        <div>
+          <label class="field-label" id="spreadLeftTopLabel">Content</label>
+          <select id="spreadLeft" onchange="updateSpreadOpts('Left','Top');buildSpread()">
+            <option value="blank">Blank (dot grid)</option>
+            <option value="grid">Grid Layout</option>
+            <option value="habit-monthly" selected>Habit Tracker — Monthly</option>
+            <option value="habit-weekly">Habit Tracker — Weekly</option>
+            <option value="calendar">Monthly Calendar</option>
+          </select>
+        </div>
+        <div id="spreadLeftCalOpts" style="display:none;margin-top:10px">
+          <div class="field-group g2">
+            <div><label class="field-label">Month</label><select id="spreadLeftMonth" onchange="buildSpread()"><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
+            <div><label class="field-label">Year</label><input type="number" id="spreadLeftYear" aria-label="Left page year" value="2025" min="2020" max="2040" oninput="buildSpread()"></div>
+          </div>
+        </div>
+        <div id="spreadLeftSplitOpts" style="display:none;margin-top:10px">
+          <label class="field-label">Split position (top %)</label>
+          <div class="range-row">
+            <input type="range" id="spreadLeftSplit" aria-label="Left page split position" min="10" max="90" value="50" oninput="updateRange('spreadLeftSplit','rSpreadLeftSplit');buildSpread()">
+            <span class="range-val" id="rSpreadLeftSplit">50</span>
+          </div>
+        </div>
+        <div id="spreadLeftBottomSection" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--paper-dark)">
+          <label class="field-label">Bottom Half</label>
+          <select id="spreadLeftBottom" onchange="updateSpreadOpts('Left','Bottom');buildSpread()">
+            <option value="blank">Blank (dot grid)</option>
+            <option value="grid">Grid Layout</option>
+            <option value="habit-monthly">Habit Tracker — Monthly</option>
+            <option value="habit-weekly">Habit Tracker — Weekly</option>
+            <option value="calendar">Monthly Calendar</option>
+          </select>
+          <div id="spreadLeftBottomCalOpts" style="display:none;margin-top:10px">
+            <div class="field-group g2">
+              <div><label class="field-label">Month</label><select id="spreadLeftBottomMonth" onchange="buildSpread()"><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
+              <div><label class="field-label">Year</label><input type="number" id="spreadLeftBottomYear" aria-label="Left bottom year" value="2025" min="2020" max="2040" oninput="buildSpread()"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:20px">
+        <div class="card-title"><span class="icon">◨</span> Right Page</div>
+        <div style="display:flex;background:var(--paper);border:1px solid var(--paper-dark);border-radius:10px;padding:3px;gap:3px;margin-bottom:14px">
+          <button id="spreadRightModeFull" onclick="setSpreadMode('Right','full')" style="flex:1;padding:6px;border:none;border-radius:8px;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;cursor:pointer;transition:all 0.15s;background:var(--ink);color:white">Full</button>
+          <button id="spreadRightModeSplit" onclick="setSpreadMode('Right','split')" style="flex:1;padding:6px;border:none;border-radius:8px;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;cursor:pointer;transition:all 0.15s;background:transparent;color:var(--ink-soft)">Split</button>
+        </div>
+        <div>
+          <label class="field-label" id="spreadRightTopLabel">Content</label>
+          <select id="spreadRight" onchange="updateSpreadOpts('Right','Top');buildSpread()">
+            <option value="blank">Blank (dot grid)</option>
+            <option value="grid">Grid Layout</option>
+            <option value="habit-monthly">Habit Tracker — Monthly</option>
+            <option value="habit-weekly" selected>Habit Tracker — Weekly</option>
+            <option value="calendar">Monthly Calendar</option>
+          </select>
+        </div>
+        <div id="spreadRightCalOpts" style="display:none;margin-top:10px">
+          <div class="field-group g2">
+            <div><label class="field-label">Month</label><select id="spreadRightMonth" onchange="buildSpread()"><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
+            <div><label class="field-label">Year</label><input type="number" id="spreadRightYear" aria-label="Right page year" value="2025" min="2020" max="2040" oninput="buildSpread()"></div>
+          </div>
+        </div>
+        <div id="spreadRightSplitOpts" style="display:none;margin-top:10px">
+          <label class="field-label">Split position (top %)</label>
+          <div class="range-row">
+            <input type="range" id="spreadRightSplit" aria-label="Right page split position" min="10" max="90" value="50" oninput="updateRange('spreadRightSplit','rSpreadRightSplit');buildSpread()">
+            <span class="range-val" id="rSpreadRightSplit">50</span>
+          </div>
+        </div>
+        <div id="spreadRightBottomSection" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--paper-dark)">
+          <label class="field-label">Bottom Half</label>
+          <select id="spreadRightBottom" onchange="updateSpreadOpts('Right','Bottom');buildSpread()">
+            <option value="blank">Blank (dot grid)</option>
+            <option value="grid">Grid Layout</option>
+            <option value="habit-monthly">Habit Tracker — Monthly</option>
+            <option value="habit-weekly">Habit Tracker — Weekly</option>
+            <option value="calendar">Monthly Calendar</option>
+          </select>
+          <div id="spreadRightBottomCalOpts" style="display:none;margin-top:10px">
+            <div class="field-group g2">
+              <div><label class="field-label">Month</label><select id="spreadRightBottomMonth" onchange="buildSpread()"><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
+              <div><label class="field-label">Year</label><input type="number" id="spreadRightBottomYear" aria-label="Right bottom year" value="2025" min="2020" max="2040" oninput="buildSpread()"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:20px">
+        <div class="card-title"><span class="icon">⚙️</span> Options</div>
+        <div>
+          <label class="field-label">Gutter Width (dots)</label>
+          <div class="range-row">
+            <input type="range" id="spreadGutter" aria-label="Gutter width" min="0" max="6" value="2" oninput="updateRange('spreadGutter','rSpreadGutter');buildSpread()">
+            <span class="range-val" id="rSpreadGutter">2</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div>
+      <div class="card" style="padding:20px">
+        <div class="preview-wrap" style="min-height:400px;overflow-x:auto">
+          <canvas id="spreadCanvas"></canvas>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:8px;justify-content:center">
+          <button class="btn-sm" onclick="downloadCanvas('spreadCanvas','spread')">⬇ Download PNG</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1598,6 +1827,8 @@ function switchTab(id) {
   if (id==='layouts') renderLayouts();
   if (id==='palette') renderPalettes();
   if (id==='export') renderExport();
+  if (id==='spread') buildSpread();
+  if (id==='collection') calculateCollection();
 }
 
 // ════════════════════════
@@ -1802,18 +2033,33 @@ function calculateHabit() {
   else calculateHabitMonthly();
 }
 
+// ─── CANVAS HELPERS ────────────────────────────────────────────
+function drawBox(ctx, x, y, w, h, fillStyle, strokeStyle, lineWidth) {
+  const r = Math.max(1.5, Math.min(w, h) * 0.18);
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, r);
+  ctx.fillStyle = fillStyle; ctx.fill();
+  ctx.strokeStyle = strokeStyle; ctx.lineWidth = lineWidth;
+  ctx.stroke();
+}
+
 // ─── SHARED CANVAS SETUP ───────────────────────────────────────
 function makeCanvas() {
   const tW = gi('tW') || 26, tH = gi('tH') || 38;
   const cv  = gv('habitCanvas');
+  const dpr = window.devicePixelRatio || 1;
   const sc  = Math.min(Math.floor(540/tW), Math.floor(540/tH), 14);
-  cv.width  = tW*sc; cv.height = tH*sc;
+  const cssW = tW*sc, cssH = tH*sc;
+  cv.width  = cssW * dpr; cv.height = cssH * dpr;
+  cv.style.width  = cssW + 'px';
+  cv.style.height = cssH + 'px';
   const ctx = cv.getContext('2d');
-  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0,0,cssW,cssH);
   // dot grid
-  ctx.fillStyle = '#d8d0c5';
+  ctx.fillStyle = '#c8bfb5';
   for (let x=0;x<tW;x++) for (let y=0;y<tH;y++){
-    ctx.beginPath(); ctx.arc(x*sc, y*sc, sc*.08,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x*sc, y*sc, Math.max(1, sc*.13),0,Math.PI*2); ctx.fill();
   }
   return { ctx, sc, tW, tH };
 }
@@ -1860,11 +2106,10 @@ function calculateHabitMonthly() {
         const startX = MARGIN + LABEL_W + col * (boxSize + gap);
         const startY = secTop + row * (boxSize + gap);
         const bx = startX * sc, by = startY * sc, bs = boxSize * sc;
-        ctx.fillStyle=`rgba(${rgb.r},${rgb.g},${rgb.b},.18)`; ctx.fillRect(bx,by,bs,bs);
-        ctx.strokeStyle=`rgba(${rgb.r},${rgb.g},${rgb.b},.65)`; ctx.lineWidth=.8; ctx.strokeRect(bx+.5,by+.5,bs-1,bs-1);
+        drawBox(ctx, bx, by, bs, bs, `rgba(${rgb.r},${rgb.g},${rgb.b},.2)`, `rgba(${rgb.r},${rgb.g},${rgb.b},.7)`, .8);
         if (hi===0&&showLbls&&sc>=7) {
-          ctx.fillStyle='rgba(120,100,80,.7)'; ctx.font=`${Math.max(4,sc*.5)}px 'DM Mono',monospace`;
-          ctx.textAlign='center'; ctx.fillText(d+1,bx+bs/2,by + sc*0.3); ctx.textAlign='left';
+          ctx.fillStyle='rgba(100,80,60,.75)'; ctx.font=`${Math.max(4,sc*.5)}px 'DM Mono',monospace`;
+          ctx.textAlign='center'; ctx.fillText(d+1,bx+bs/2,by + bs*0.72); ctx.textAlign='left';
         }
       }
     });
@@ -1885,10 +2130,9 @@ function calculateHabitMonthly() {
         const startX = MARGIN + hi * (colW + gap);
         const startY_d = startY + d * (boxSize + gap);
         const snappedBx = startX * sc, snappedBy = startY_d * sc;
-        ctx.fillStyle=`rgba(${rgb.r},${rgb.g},${rgb.b},.18)`; ctx.fillRect(snappedBx,snappedBy,colW*sc,boxSize*sc);
-        ctx.strokeStyle=`rgba(${rgb.r},${rgb.g},${rgb.b},.6)`; ctx.lineWidth=.7; ctx.strokeRect(snappedBx+.5,snappedBy+.5,colW*sc-1,boxSize*sc-1);
+        drawBox(ctx, snappedBx, snappedBy, colW*sc, boxSize*sc, `rgba(${rgb.r},${rgb.g},${rgb.b},.2)`, `rgba(${rgb.r},${rgb.g},${rgb.b},.65)`, .7);
       });
-      if (showLbls&&sc>=7){ ctx.fillStyle='rgba(120,100,80,.65)'; ctx.font=`${Math.max(4,sc*.5)}px 'DM Mono',monospace`; ctx.textAlign='right'; ctx.fillText(d+1,(MARGIN-.2)*sc,by + sc*1.25); ctx.textAlign='left'; }
+      if (showLbls&&sc>=7){ ctx.fillStyle='rgba(100,80,60,.75)'; ctx.font=`${Math.max(4,sc*.5)}px 'DM Mono',monospace`; ctx.textAlign='right'; ctx.fillText(d+1,(MARGIN-.2)*sc,by + boxSize*sc*0.72); ctx.textAlign='left'; }
     }
   }
 }
@@ -1899,8 +2143,8 @@ function calculateHabitWeekly() {
   const dir     = gi('habitDir'), bounds = gi('habitBounds');
   const boxSize = Math.max(1,gi('habitBoxSize')), gap = gi('habitGap');
   const showLbls= gi('showDayNums'), startDay = gi('habitWeekStart');
-  const slots   = gi('habitTimeSlots')||0;
   const effTW   = bounds==='half' ? Math.floor(tW/2) : tW;
+  const days    = 7;
 
   const raw = gv('habitWeekDate').value;
   const anchor = raw ? new Date(raw+'T12:00:00') : new Date();
@@ -1908,115 +2152,79 @@ function calculateHabitWeekly() {
   const dayDates = Array.from({length:7},(_,i)=>{ const d=new Date(ws); d.setDate(d.getDate()+i); return d; });
   const dayLabels = dayDates.map(d=>DAY_SHORT[d.getDay()]);
 
+  const MARGIN = 1, LABEL_W = 5;
+  const availW = effTW - MARGIN*2 - (dir==='h' ? LABEL_W : 0);
+  const dpr    = Math.max(1, Math.floor((availW + gap) / (boxSize + gap)));
+  const wrapRows = Math.ceil(days / dpr);
+  const dpRow  = Math.min(days, dpr);
+
   gv('habitStats').innerHTML =
     `Mode: Weekly<br>Week of ${ws.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}<br>`+
-    `Days: ${dayLabels.join(' · ')}<br>Habits: ${habits.length}${slots?` × ${slots} time slots`:''}<br>`+
-    `Total cells: ${7*habits.length*Math.max(1,slots)}`;
+    `Days per row: ${dpRow}`+(days>dpr?` (wraps ×${wrapRows})`:'')+`<br>`+
+    `Box: ${boxSize} dot · Gap: ${gap} dot<br>Total cells: ${habits.length*days}`;
 
   const {ctx,sc} = makeCanvas();
-  const MARGIN=1, LABEL_W=5, HEADER_H=showLbls?2.5:1.8;
-  const startY=MARGIN+HEADER_H;
-
-  // Week title
   ctx.fillStyle='#3a3530'; ctx.font=`bold ${Math.max(7,sc*1.3)}px Georgia,serif`;
   ctx.fillText('Week of '+ws.toLocaleDateString('en-US',{month:'short',day:'numeric'}), MARGIN*sc, 1.8*sc);
+  const baseY   = 3;
+  const HEADER_H = showLbls ? 3 : 0;
+  const startY  = baseY + HEADER_H;
 
   if (dir==='h') {
-    // Days = columns
-    const availW = effTW-MARGIN*2-LABEL_W;
-    const dayColW= Math.max(boxSize, Math.floor((availW-gap*6)/7));
-    const slotCount = Math.max(1,slots);
-
-    // Day headers
-    dayLabels.forEach((lbl,di)=>{
-      const bx=(MARGIN+LABEL_W+di*(dayColW+gap))*sc;
-      ctx.fillStyle='#4a4440'; ctx.textAlign='center';
-      if (showLbls) {
+    // Day column headers
+    if (showLbls) {
+      for (let col=0; col<Math.min(dpr,days); col++) {
+        const cx = (MARGIN + LABEL_W + col*(boxSize+gap))*sc + (boxSize*sc)/2;
+        ctx.textAlign='center';
+        ctx.fillStyle='#3a3530';
         ctx.font=`bold ${Math.max(5,sc*.75)}px 'Instrument Sans',sans-serif`;
-        ctx.fillText(lbl, bx+dayColW*sc/2, (MARGIN+1.4)*sc);
-        ctx.fillStyle='rgba(120,100,80,.55)'; ctx.font=`${Math.max(4,sc*.55)}px 'DM Mono',monospace`;
-        ctx.fillText(dayDates[di].getDate(), bx+dayColW*sc/2, (MARGIN+2.1)*sc);
-      } else {
-        ctx.font=`bold ${Math.max(5,sc*.8)}px 'Instrument Sans',sans-serif`;
-        ctx.fillText(lbl[0], bx+dayColW*sc/2, (MARGIN+1.3)*sc);
+        ctx.fillText(dayLabels[col], cx, (baseY+1.1)*sc);
+        ctx.fillStyle='rgba(120,100,80,.65)';
+        ctx.font=`${Math.max(4,sc*.55)}px 'DM Mono',monospace`;
+        ctx.fillText(dayDates[col].getDate(), cx, (baseY+1.9)*sc);
+        ctx.textAlign='left';
       }
-      ctx.textAlign='left';
-    });
+    }
 
-    // Habit rows (with optional time slots)
-    habits.forEach((h,hi)=>{
-      const rgb=hexToRgb(h.color);
-      for (let si=0;si<slotCount;si++) {
-        const rowIdx=hi*slotCount+si;
-        const by=(startY+rowIdx*(boxSize+gap))*sc, bs=boxSize*sc;
-        // Habit label on first slot
-        if (si===0) {
-          ctx.save(); ctx.beginPath(); ctx.rect(MARGIN*sc,by,LABEL_W*sc-2,bs*slotCount+gap*sc*(slotCount-1)); ctx.clip();
-          ctx.fillStyle=`rgba(${rgb.r},${rgb.g},${rgb.b},.95)`;
-          ctx.font=`600 ${Math.max(5,Math.min(sc*.75,11))}px 'Instrument Sans',sans-serif`;
-          ctx.fillText(h.name, MARGIN*sc+1, by+bs*.72); ctx.restore();
-        }
-        // Slot sub-label
-        if (slots>0&&sc>=7) {
-          const SLOT_LBL={3:['AM','PM','Eve'],4:['Morn','Noon','Aft','Eve'],6:['6a','10a','2p','6p','8p','10p']};
-          const arr=SLOT_LBL[slots]||[];
-          ctx.fillStyle='rgba(120,100,80,.5)'; ctx.font=`${Math.max(4,sc*.45)}px 'DM Mono',monospace`;
-          ctx.textAlign='right'; ctx.fillText(arr[si]||'', (MARGIN+LABEL_W-.3)*sc, by+bs*.72); ctx.textAlign='left';
-        }
-        // Boxes per day - corners touch dots
-        dayLabels.forEach((_,di)=>{
-          const startX = MARGIN + LABEL_W + di * (dayColW + gap);
-          const startY_d = startY + rowIdx * (boxSize + gap);
-          const bx = (startX + 0.5) * sc, by = (startY_d + 0.5) * sc;
-          ctx.fillStyle=`rgba(${rgb.r},${rgb.g},${rgb.b},.18)`; ctx.fillRect(bx,by,dayColW*sc,boxSize*sc);
-          ctx.strokeStyle=`rgba(${rgb.r},${rgb.g},${rgb.b},.65)`; ctx.lineWidth=.8; ctx.strokeRect(bx+.5,by+.5,dayColW*sc-1,boxSize*sc-1);
-        });
-      }
-      // Habit separator
-      if (hi<habits.length-1) {
-        const sepY=(startY+(hi+1)*slotCount*(boxSize+gap)-gap*.4)*sc;
-        ctx.strokeStyle='rgba(180,165,150,.35)'; ctx.lineWidth=.5; ctx.setLineDash([2,2]);
-        ctx.beginPath(); ctx.moveTo(MARGIN*sc,sepY); ctx.lineTo((effTW-MARGIN)*sc,sepY); ctx.stroke();
-        ctx.setLineDash([]);
+    const sectionH = wrapRows*(boxSize+gap);
+    habits.forEach((h,hi) => {
+      const rgb = hexToRgb(h.color);
+      const secTop = startY + hi*(sectionH+(hi>0?gap:0));
+      // Habit label
+      ctx.save(); ctx.beginPath(); ctx.rect(MARGIN*sc,secTop*sc,LABEL_W*sc-2,sectionH*sc); ctx.clip();
+      ctx.fillStyle=`rgba(${rgb.r},${rgb.g},${rgb.b},.95)`;
+      ctx.font=`600 ${Math.max(5,Math.min(sc*.75,11))}px 'Instrument Sans',sans-serif`;
+      ctx.fillText(h.name, MARGIN*sc+1, (secTop+boxSize*.72)*sc); ctx.restore();
+      // Boxes
+      for (let d=0;d<days;d++) {
+        const row=Math.floor(d/dpr), col=d%dpr;
+        const startX = MARGIN + LABEL_W + col*(boxSize+gap);
+        const startY_d = secTop + row*(boxSize+gap);
+        const bx = startX*sc, by = startY_d*sc, bs = boxSize*sc;
+        drawBox(ctx, bx, by, bs, bs, `rgba(${rgb.r},${rgb.g},${rgb.b},.2)`, `rgba(${rgb.r},${rgb.g},${rgb.b},.7)`, .8);
       }
     });
-
   } else {
-    // Days = rows, habits = columns
-    const slotCount=Math.max(1,slots);
-    const totalCols=habits.length*slotCount;
-    const colW=Math.max(boxSize,Math.floor((effTW-MARGIN*2-(totalCols-1)*gap)/totalCols));
-
-    // Column headers
+    const colW=Math.max(1,Math.floor((effTW-MARGIN*2-(habits.length-1)*gap)/habits.length));
     habits.forEach((h,hi)=>{
-      const rgb=hexToRgb(h.color);
-      for (let si=0;si<slotCount;si++) {
-        const ci=hi*slotCount+si, bx=(MARGIN+ci*(colW+gap))*sc;
-        ctx.save(); ctx.beginPath(); ctx.rect(bx,(startY-1.5)*sc,colW*sc,sc*1.5); ctx.clip();
-        ctx.fillStyle=`rgba(${rgb.r},${rgb.g},${rgb.b},.95)`;
-        ctx.font=`600 ${Math.max(4,Math.min(sc*.65,10))}px 'Instrument Sans',sans-serif`;
-        const SLOT_LBL={3:['','AM','PM'],4:['','No','Af','Ev'],6:['','10','2p','6p','8p','10']};
-        ctx.fillText(si===0?h.name:(SLOT_LBL[slots]||[])[si]||'', bx+1, (startY-.4)*sc); ctx.restore();
-      }
+      const rgb=hexToRgb(h.color), bx=(MARGIN+hi*(colW+gap))*sc;
+      ctx.save(); ctx.beginPath(); ctx.rect(bx,(startY-1.2)*sc,colW*sc,sc*1.2); ctx.clip();
+      ctx.fillStyle=`rgba(${rgb.r},${rgb.g},${rgb.b},.95)`;
+      ctx.font=`600 ${Math.max(5,Math.min(sc*.7,10))}px 'Instrument Sans',sans-serif`;
+      ctx.fillText(h.name,bx+sc*0.5+1,(startY-.35)*sc); ctx.restore();
     });
-
-    // Day rows
-    for (let di=0;di<7;di++) {
-      const by=(startY+di*(boxSize+gap))*sc;
-      if (showLbls) {
-        ctx.fillStyle='#4a4440'; ctx.font=`bold ${Math.max(5,sc*.7)}px 'Instrument Sans',sans-serif`;
-        ctx.textAlign='right'; ctx.fillText(DAY_SHORT[dayDates[di].getDay()],(MARGIN-.1)*sc,by+boxSize*sc*.75); ctx.textAlign='left';
-      }
+    for (let d=0;d<days;d++) {
       habits.forEach((h,hi)=>{
         const rgb=hexToRgb(h.color);
-        for (let si=0;si<slotCount;si++) {
-          const ci=hi*slotCount+si, dotX = MARGIN + ci * (colW + gap);
-          const dotY = startY + di * (boxSize + gap);
-          const bx = dotX * sc, by = dotY * sc;
-          ctx.fillStyle=`rgba(${rgb.r},${rgb.g},${rgb.b},.18)`; ctx.fillRect(bx,by,colW*sc,boxSize*sc);
-          ctx.strokeStyle=`rgba(${rgb.r},${rgb.g},${rgb.b},.6)`; ctx.lineWidth=.7; ctx.strokeRect(bx+.5,by+.5,colW*sc-1,boxSize*sc-1);
-        }
+        const startX = MARGIN + hi*(colW+gap);
+        const startY_d = startY + d*(boxSize+gap);
+        const snappedBx = startX*sc, snappedBy = startY_d*sc;
+        drawBox(ctx, snappedBx, snappedBy, colW*sc, boxSize*sc, `rgba(${rgb.r},${rgb.g},${rgb.b},.2)`, `rgba(${rgb.r},${rgb.g},${rgb.b},.65)`, .7);
       });
+      if (showLbls&&sc>=7) {
+        ctx.fillStyle='rgba(100,80,60,.75)'; ctx.font=`bold ${Math.max(4,sc*.5)}px 'Instrument Sans',sans-serif`;
+        ctx.textAlign='right'; ctx.fillText(dayLabels[d],(MARGIN-.2)*sc, (startY+d*(boxSize+gap))*sc + boxSize*sc*0.72); ctx.textAlign='left';
+      }
     }
   }
   pushHistory();
@@ -2304,6 +2512,476 @@ Box size   :  ${gi('habitBoxSize')||1} dot(s)  |  Gap: ${gi('habitGap')||1}`;
 }
 
 // ════════════════════════
+// ════════════════════════
+// COLLECTIONS PLANNER
+// ════════════════════════
+let collColor = '#4a5fa8';
+
+function initCollColors() {
+  const wrap = gv('collColorSwatches'); if (!wrap) return;
+  wrap.innerHTML = calcColors.map(c =>
+    `<div class="color-swatch ${c===collColor?'selected':''}" style="background:${c}"
+      onclick="collColor='${c}';initCollColors();calculateCollection()"></div>`
+  ).join('');
+}
+
+function makeCollCanvas() {
+  const tW = gi('tW')||26, tH = gi('tH')||38;
+  const dpr = window.devicePixelRatio || 1;
+  const sc  = Math.min(Math.floor(540/tW), Math.floor(540/tH), 14);
+  const cssW = tW*sc, cssH = tH*sc;
+  const cv  = gv('collCanvas');
+  cv.width  = cssW*dpr; cv.height = cssH*dpr;
+  cv.style.width = cssW+'px'; cv.style.height = cssH+'px';
+  const ctx = cv.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, cssW, cssH);
+  ctx.fillStyle = '#c8bfb5';
+  for (let x=0; x<tW; x++) for (let y=0; y<tH; y++) {
+    ctx.beginPath(); ctx.arc(x*sc, y*sc, Math.max(1, sc*.13), 0, Math.PI*2); ctx.fill();
+  }
+  return { ctx, sc, tW, tH };
+}
+
+function calculateCollection() {
+  const tW = gi('tW')||26, tH = gi('tH')||38;
+  const bounds      = gv('collBounds') ? gv('collBounds').value : 'full';
+  const effTW       = bounds==='half' ? Math.floor(tW/2) : tW;
+  const cols        = gi('collCols') || 2;
+  const lineSpacing = Math.max(1, gi('collLineSpacing') || 2);
+  const showNums    = gi('collShowNums');
+  const bulletStyle = gv('collBullet') ? gv('collBullet').value : 'dot';
+  const headerStyle = gv('collHeaderStyle') ? gv('collHeaderStyle').value : 'underlined';
+  const title       = gv('collTitle') ? (gv('collTitle').value || 'My Collection') : 'My Collection';
+
+  const MARGIN   = 1;
+  const HEADER_H = headerStyle==='banner' ? 3.5 : 2.8;
+  const COL_GAP  = 1;
+  const NUM_W    = showNums ? 2 : 0;
+  const BULLET_W = bulletStyle==='none' ? 0 : 1.5;
+  const colW     = Math.floor((effTW - MARGIN*2 - COL_GAP*(cols-1)) / cols);
+  const startY   = MARGIN + HEADER_H;
+  const numLines = Math.floor((tH - startY - MARGIN) / lineSpacing);
+
+  if (gv('collStats')) gv('collStats').innerHTML =
+    `Title: "${title}"<br>Columns: ${cols} · Lines each: ${numLines}<br>`+
+    `Total slots: ${numLines*cols}<br>Line spacing: ${lineSpacing} dot`;
+
+  const {ctx, sc} = makeCollCanvas();
+  const rgb = hexToRgb(collColor);
+
+  // ── Header ──
+  if (headerStyle==='banner') {
+    ctx.fillStyle=`rgba(${rgb.r},${rgb.g},${rgb.b},.22)`;
+    ctx.fillRect(MARGIN*sc, MARGIN*sc, (effTW-MARGIN*2)*sc, (HEADER_H-.4)*sc);
+  }
+  ctx.fillStyle='#3a3530';
+  ctx.font=`bold italic ${Math.max(8,sc*1.5)}px 'Playfair Display',Georgia,serif`;
+  ctx.fillText(title, MARGIN*sc+2, (MARGIN+1.8)*sc);
+  if (headerStyle==='underlined'||headerStyle==='banner') {
+    ctx.strokeStyle=`rgba(${rgb.r},${rgb.g},${rgb.b},.9)`;
+    ctx.lineWidth = headerStyle==='banner' ? 2 : 1.2;
+    ctx.beginPath();
+    ctx.moveTo(MARGIN*sc, (MARGIN+HEADER_H-.3)*sc);
+    ctx.lineTo((effTW-MARGIN)*sc, (MARGIN+HEADER_H-.3)*sc);
+    ctx.stroke();
+  }
+
+  // ── Lines ──
+  for (let col=0; col<cols; col++) {
+    const colStartX = MARGIN + col*(colW+COL_GAP);
+    for (let line=0; line<numLines; line++) {
+      const slotTop  = startY + line*lineSpacing;
+      const lineY    = slotTop + lineSpacing;      // writing rule at bottom of slot
+      const bulletY  = slotTop + lineSpacing*0.5;  // symbol at vertical centre
+
+      // Line number
+      if (showNums) {
+        ctx.fillStyle='rgba(80,60,40,.8)';
+        ctx.font=`${Math.max(4,sc*.45)}px 'DM Mono',monospace`;
+        ctx.textAlign='right';
+        ctx.fillText(col*numLines+line+1, (colStartX+NUM_W-.2)*sc, (bulletY+.3)*sc);
+        ctx.textAlign='left';
+      }
+
+      // Bullet symbol
+      if (bulletStyle!=='none') {
+        const bx = (colStartX+NUM_W+0.55)*sc, by = bulletY*sc;
+        ctx.fillStyle  = `rgba(${rgb.r},${rgb.g},${rgb.b},1)`;
+        ctx.strokeStyle= `rgba(${rgb.r},${rgb.g},${rgb.b},1)`;
+        ctx.lineWidth  = .9;
+        if (bulletStyle==='dot') {
+          ctx.beginPath(); ctx.arc(bx, by, Math.max(1, sc*.13), 0, Math.PI*2); ctx.fill();
+        } else if (bulletStyle==='circle') {
+          ctx.beginPath(); ctx.arc(bx, by, Math.max(1.5, sc*.2), 0, Math.PI*2); ctx.stroke();
+        } else if (bulletStyle==='dash') {
+          ctx.beginPath(); ctx.moveTo(bx-sc*.22, by); ctx.lineTo(bx+sc*.22, by); ctx.stroke();
+        } else if (bulletStyle==='checkbox') {
+          const s = Math.max(3, sc*.32);
+          ctx.strokeRect(bx-s/2, by-s/2, s, s);
+        } else if (bulletStyle==='arrow') {
+          ctx.font=`${Math.max(5,sc*.6)}px sans-serif`;
+          ctx.fillText('›', bx-sc*.18, by+sc*.22);
+        }
+      }
+
+      // Writing rule
+      const lineStartX = colStartX + NUM_W + BULLET_W;
+      ctx.strokeStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},.5)`;
+      ctx.lineWidth   = .8;
+      ctx.beginPath();
+      ctx.moveTo(lineStartX*sc, lineY*sc);
+      ctx.lineTo((colStartX+colW)*sc, lineY*sc);
+      ctx.stroke();
+    }
+  }
+}
+
+function copyCollSetup() {
+  const title       = gv('collTitle') ? gv('collTitle').value : 'My Collection';
+  const cols        = gi('collCols');
+  const lineSpacing = gi('collLineSpacing');
+  const tH = gi('tH')||38, MARGIN=1, HEADER_H=3;
+  const numLines = Math.floor((tH-MARGIN-HEADER_H-MARGIN)/lineSpacing);
+  copyText(
+    `BuJo Collection: ${title}\n`+
+    `Columns: ${cols} · Lines per column: ${numLines} · Spacing: ${lineSpacing} dot\n`+
+    `Bullet: ${gv('collBullet').value} · Header: ${gv('collHeaderStyle').value}\n`+
+    `Accent: ${collColor}`
+  );
+}
+
+// ════════════════════════
+// SPREAD BUILDER
+// ════════════════════════
+const spreadModes = { Left: 'full', Right: 'full' };
+
+function setSpreadMode(side, mode) {
+  spreadModes[side] = mode;
+  const isS = mode === 'split';
+  const fullBtn  = gv('spread'+side+'ModeFull');
+  const splitBtn = gv('spread'+side+'ModeSplit');
+  fullBtn.style.background  = isS ? 'transparent'    : 'var(--ink)';
+  fullBtn.style.color       = isS ? 'var(--ink-soft)' : 'white';
+  splitBtn.style.background = isS ? 'var(--ink)'     : 'transparent';
+  splitBtn.style.color      = isS ? 'white'           : 'var(--ink-soft)';
+  gv('spread'+side+'TopLabel').textContent = isS ? 'Top Half' : 'Content';
+  gv('spread'+side+'SplitOpts').style.display    = isS ? 'block' : 'none';
+  gv('spread'+side+'BottomSection').style.display = isS ? 'block' : 'none';
+  buildSpread();
+}
+
+function updateSpreadOpts(side, section) {
+  const elId = section==='Bottom' ? 'spread'+side+'Bottom' : 'spread'+side;
+  const calId = section==='Bottom' ? 'spread'+side+'BottomCalOpts' : 'spread'+side+'CalOpts';
+  const el = gv(elId), cal = gv(calId);
+  if (el && cal) cal.style.display = el.value==='calendar' ? 'block' : 'none';
+}
+
+function buildSpread() {
+  const tW = gi('tW')||26, tH = gi('tH')||38;
+  const dpr = window.devicePixelRatio || 1;
+  const gutter = gi('spreadGutter');
+  const sc = Math.min(Math.floor(480/tW), Math.floor(480/tH), 11);
+  const pageW = tW*sc, pageH = tH*sc, gutterPx = gutter*sc;
+  const totalW = pageW*2 + gutterPx;
+  const halfH  = Math.floor(tH/2);
+
+  const cv = gv('spreadCanvas');
+  cv.width = totalW*dpr; cv.height = pageH*dpr;
+  cv.style.width = totalW+'px'; cv.style.height = pageH+'px';
+  const ctx = cv.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.fillStyle = '#f8f5ef'; ctx.fillRect(0, 0, totalW, pageH);
+
+  const leftSplitPct  = spreadModes.Left==='split'  ? (gi('spreadLeftSplit')||50)  : 50;
+  const rightSplitPct = spreadModes.Right==='split' ? (gi('spreadRightSplit')||50) : 50;
+
+  // Left page
+  if (spreadModes.Left==='split') {
+    const lRow = Math.round(tH * leftSplitPct / 100);
+    spreadDrawPageHalf(ctx, sc, tW, tH, 0, gv('spreadLeft').value, 'Left', 'top', lRow);
+    spreadDrawPageHalf(ctx, sc, tW, tH, 0, gv('spreadLeftBottom').value, 'LeftBottom', 'bottom', lRow);
+    ctx.strokeStyle='#b8b0a5'; ctx.lineWidth=.8; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(0, lRow*sc); ctx.lineTo(pageW, lRow*sc); ctx.stroke();
+    ctx.setLineDash([]);
+  } else {
+    spreadDrawPage(ctx, sc, tW, tH, 0, gv('spreadLeft')?gv('spreadLeft').value:'blank', 'Left');
+  }
+
+  // Spine
+  if (gutter > 0) {
+    ctx.strokeStyle = '#c8bfb5'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pageW + gutterPx/2, 0); ctx.lineTo(pageW + gutterPx/2, pageH); ctx.stroke();
+  }
+
+  // Right page
+  if (spreadModes.Right==='split') {
+    const rRow = Math.round(tH * rightSplitPct / 100);
+    spreadDrawPageHalf(ctx, sc, tW, tH, pageW+gutterPx, gv('spreadRight').value, 'Right', 'top', rRow);
+    spreadDrawPageHalf(ctx, sc, tW, tH, pageW+gutterPx, gv('spreadRightBottom').value, 'RightBottom', 'bottom', rRow);
+    ctx.strokeStyle='#b8b0a5'; ctx.lineWidth=.8; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(pageW+gutterPx, rRow*sc); ctx.lineTo(pageW*2+gutterPx, rRow*sc); ctx.stroke();
+    ctx.setLineDash([]);
+  } else {
+    spreadDrawPage(ctx, sc, tW, tH, pageW+gutterPx, gv('spreadRight')?gv('spreadRight').value:'blank', 'Right');
+  }
+}
+
+function spreadDrawPageHalf(ctx, sc, tW, tH, ox, type, side, half, splitRow) {
+  splitRow = splitRow || Math.floor(tH/2);
+  const yOff  = half==='bottom' ? splitRow : 0;
+  const halfH = half==='bottom' ? tH - splitRow : splitRow;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(ox, yOff*sc, tW*sc, halfH*sc); ctx.clip();
+  ctx.translate(0, yOff*sc);
+  ctx.fillStyle = '#c8bfb5';
+  for (let x=0; x<tW; x++) for (let y=0; y<halfH; y++) {
+    ctx.beginPath(); ctx.arc(ox+x*sc, y*sc, Math.max(1, sc*.13), 0, Math.PI*2); ctx.fill();
+  }
+  if (type !== 'blank') spreadDrawContent(ctx, sc, tW, tH, ox, type, side);
+  ctx.restore();
+}
+
+function spreadDrawContent(ctx, sc, tW, tH, ox, type, side) {
+  if (type==='grid')          spreadDrawGrid(ctx, sc, tW, tH, ox);
+  if (type==='habit-monthly') spreadDrawHabitMonthly(ctx, sc, tW, tH, ox);
+  if (type==='habit-weekly')  spreadDrawHabitWeekly(ctx, sc, tW, tH, ox);
+  if (type==='calendar') {
+    // side may be 'Left','Right','LeftBottom','RightBottom' — build correct element IDs
+    const mEl = gv('spread'+side+'Month'), yEl = gv('spread'+side+'Year');
+    const month = mEl ? parseInt(mEl.value) : (new Date().getMonth()+1);
+    const year  = yEl ? parseInt(yEl.value) : new Date().getFullYear();
+    spreadDrawCalendar(ctx, sc, tW, tH, ox, month, year);
+  }
+}
+
+function spreadDrawPage(ctx, sc, tW, tH, ox, type, side) {
+  ctx.fillStyle = '#c8bfb5';
+  for (let x=0; x<tW; x++) for (let y=0; y<tH; y++) {
+    ctx.beginPath(); ctx.arc(ox+x*sc, y*sc, Math.max(1, sc*.13), 0, Math.PI*2); ctx.fill();
+  }
+  if (type==='blank') return;
+  spreadDrawContent(ctx, sc, tW, tH, ox, type, side);
+}
+
+function spreadDrawGrid(ctx, sc, tW, tH, ox) {
+  const cols = gi('cols')||2, rows2 = gi('rows')||4;
+  const gtr  = gi('gutter')||1, mLR = gi('mLR')||1, mTB = gi('mTB')||1;
+  const label = gv('pageLabel') ? gv('pageLabel').value : '';
+  const headerRows = gi('headerRows')||0, headerH = gi('headerH')||4;
+  const showLines = gv('showLines') && gv('showLines').checked;
+  const usableW = tW - mLR*2 - gtr*(cols-1);
+  const usableH = tH - mTB*2 - gtr*(rows2-1) - (headerRows>0 ? headerH+gtr : 0);
+  const colW = Math.floor(usableW/cols), rowH = Math.floor(usableH/rows2);
+  const rgb  = hexToRgb(calcColor||'#c97d3a');
+  if (label) {
+    ctx.fillStyle='#3a3530'; ctx.font=`bold ${Math.max(7,sc*1.1)}px Georgia,serif`;
+    ctx.fillText(label, ox+mLR*sc, (mTB+1.6)*sc);
+  }
+  const yStart = mTB + (headerRows>0 ? headerH+gtr : 0);
+  if (headerRows>0) {
+    const hw = (tW-mLR*2)*sc;
+    for (let h=0; h<headerRows; h++) {
+      const by = (mTB+h*(headerH+gtr))*sc;
+      ctx.fillStyle=`rgba(${rgb.r},${rgb.g},${rgb.b},.1)`; ctx.fillRect(ox+mLR*sc, by, hw, headerH*sc);
+      ctx.strokeStyle=`rgba(${rgb.r},${rgb.g},${rgb.b},.4)`; ctx.lineWidth=.8; ctx.strokeRect(ox+mLR*sc+.5, by+.5, hw-1, headerH*sc-1);
+    }
+  }
+  for (let c=0; c<cols; c++) for (let r=0; r<rows2; r++) {
+    const bx = ox+(mLR+c*(colW+gtr))*sc, by = (yStart+r*(rowH+gtr))*sc;
+    ctx.fillStyle=`rgba(${rgb.r},${rgb.g},${rgb.b},.1)`; ctx.fillRect(bx, by, colW*sc, rowH*sc);
+    ctx.strokeStyle=`rgba(${rgb.r},${rgb.g},${rgb.b},${showLines?.5:.35})`; ctx.lineWidth=.8;
+    ctx.strokeRect(bx+.5, by+.5, colW*sc-1, rowH*sc-1);
+  }
+}
+
+function spreadDrawHabitMonthly(ctx, sc, tW, tH, ox) {
+  const month   = gi('habitMonth'), year = gi('habitYear')||2025;
+  const days    = Math.max(1, Math.min(gi('habitDays')||getDaysInMonth(month,year), 31));
+  const dir     = gi('habitDir'), bounds = gi('habitBounds');
+  const boxSize = Math.max(1, gi('habitBoxSize')), gap = gi('habitGap');
+  const showLbls= gi('showDayNums');
+  const effTW   = bounds==='half' ? Math.floor(tW/2) : tW;
+  const MARGIN=1, LABEL_W=5;
+  const availW  = effTW-MARGIN*2-(dir==='h'?LABEL_W:0);
+  const dpr2    = Math.max(1, Math.floor((availW+gap)/(boxSize+gap)));
+  const wrapRows= Math.ceil(days/dpr2);
+  ctx.fillStyle='#3a3530'; ctx.font=`bold ${Math.max(6,sc*1.2)}px Georgia,serif`;
+  ctx.fillText(`${MONTH_NAMES[month]} ${year}`, ox+MARGIN*sc, 1.8*sc);
+  const startY = showLbls ? 4 : 3;
+  if (dir==='h') {
+    const sectionH = wrapRows*(boxSize+gap);
+    habits.forEach((h,hi) => {
+      const rgb = hexToRgb(h.color), secTop = startY+hi*(sectionH+(hi>0?gap:0));
+      ctx.save(); ctx.beginPath(); ctx.rect(ox+MARGIN*sc,secTop*sc,LABEL_W*sc-2,sectionH*sc); ctx.clip();
+      ctx.fillStyle=`rgba(${rgb.r},${rgb.g},${rgb.b},.95)`;
+      ctx.font=`600 ${Math.max(4,Math.min(sc*.7,10))}px 'Instrument Sans',sans-serif`;
+      ctx.fillText(h.name, ox+MARGIN*sc+1, (secTop+boxSize*.72)*sc); ctx.restore();
+      for (let d=0; d<days; d++) {
+        const row=Math.floor(d/dpr2), col=d%dpr2;
+        const bx=ox+(MARGIN+LABEL_W+col*(boxSize+gap))*sc, by=(secTop+row*(boxSize+gap))*sc, bs=boxSize*sc;
+        drawBox(ctx, bx, by, bs, bs, `rgba(${rgb.r},${rgb.g},${rgb.b},.2)`, `rgba(${rgb.r},${rgb.g},${rgb.b},.7)`, .8);
+        if (hi===0&&showLbls&&sc>=6) {
+          ctx.fillStyle='rgba(100,80,60,.75)'; ctx.textAlign='center';
+          ctx.font=`${Math.max(3,sc*.45)}px 'DM Mono',monospace`;
+          ctx.fillText(d+1, bx+bs/2, by+bs*0.72); ctx.textAlign='left';
+        }
+      }
+    });
+  } else {
+    const colW=Math.max(1,Math.floor((effTW-MARGIN*2-(habits.length-1)*gap)/habits.length));
+    habits.forEach((h,hi) => {
+      const rgb=hexToRgb(h.color), bx=ox+(MARGIN+hi*(colW+gap))*sc;
+      ctx.save(); ctx.beginPath(); ctx.rect(bx,(startY-1.2)*sc,colW*sc,sc*1.2); ctx.clip();
+      ctx.fillStyle=`rgba(${rgb.r},${rgb.g},${rgb.b},.95)`;
+      ctx.font=`600 ${Math.max(4,Math.min(sc*.65,9))}px 'Instrument Sans',sans-serif`;
+      ctx.fillText(h.name, bx+sc*.4+1, (startY-.35)*sc); ctx.restore();
+    });
+    for (let d=0; d<days; d++) {
+      habits.forEach((h,hi) => {
+        const rgb=hexToRgb(h.color), bx=ox+(MARGIN+hi*(colW+gap))*sc, by=(startY+d*(boxSize+gap))*sc;
+        drawBox(ctx, bx, by, colW*sc, boxSize*sc, `rgba(${rgb.r},${rgb.g},${rgb.b},.2)`, `rgba(${rgb.r},${rgb.g},${rgb.b},.65)`, .7);
+      });
+      if (showLbls&&sc>=6) {
+        ctx.fillStyle='rgba(100,80,60,.75)'; ctx.font=`${Math.max(3,sc*.45)}px 'DM Mono',monospace`;
+        ctx.textAlign='right'; ctx.fillText(d+1, ox+(MARGIN-.2)*sc, (startY+d*(boxSize+gap))*sc+boxSize*sc*.72); ctx.textAlign='left';
+      }
+    }
+  }
+}
+
+function spreadDrawHabitWeekly(ctx, sc, tW, tH, ox) {
+  const dir     = gi('habitDir'), bounds = gi('habitBounds');
+  const boxSize = Math.max(1, gi('habitBoxSize')), gap = gi('habitGap');
+  const showLbls= gi('showDayNums'), startDay = gi('habitWeekStart');
+  const effTW   = bounds==='half' ? Math.floor(tW/2) : tW;
+  const days    = 7;
+  const raw = gv('habitWeekDate').value;
+  const anchor  = raw ? new Date(raw+'T12:00:00') : new Date();
+  const ws      = getWeekStart(anchor, startDay);
+  const dayDates = Array.from({length:7},(_,i)=>{ const d=new Date(ws); d.setDate(d.getDate()+i); return d; });
+  const dayLabels = dayDates.map(d=>DAY_SHORT[d.getDay()]);
+  const MARGIN=1, LABEL_W=5;
+  const availW  = effTW-MARGIN*2-(dir==='h'?LABEL_W:0);
+  const dpr2    = Math.max(1, Math.floor((availW+gap)/(boxSize+gap)));
+  const wrapRows= Math.ceil(days/dpr2);
+  ctx.fillStyle='#3a3530'; ctx.font=`bold ${Math.max(6,sc*1.2)}px Georgia,serif`;
+  ctx.fillText('Week of '+ws.toLocaleDateString('en-US',{month:'short',day:'numeric'}), ox+MARGIN*sc, 1.8*sc);
+  const baseY=3, HEADER_H=showLbls?3:0, startY=baseY+HEADER_H;
+  if (dir==='h') {
+    if (showLbls) {
+      for (let col=0; col<Math.min(dpr2,days); col++) {
+        const cx=ox+(MARGIN+LABEL_W+col*(boxSize+gap))*sc+(boxSize*sc)/2;
+        ctx.textAlign='center';
+        ctx.fillStyle='#3a3530'; ctx.font=`bold ${Math.max(4,sc*.7)}px 'Instrument Sans',sans-serif`;
+        ctx.fillText(dayLabels[col], cx, (baseY+1.1)*sc);
+        ctx.fillStyle='rgba(120,100,80,.65)'; ctx.font=`${Math.max(3,sc*.5)}px 'DM Mono',monospace`;
+        ctx.fillText(dayDates[col].getDate(), cx, (baseY+1.9)*sc);
+        ctx.textAlign='left';
+      }
+    }
+    const sectionH = wrapRows*(boxSize+gap);
+    habits.forEach((h,hi) => {
+      const rgb=hexToRgb(h.color), secTop=startY+hi*(sectionH+(hi>0?gap:0));
+      ctx.save(); ctx.beginPath(); ctx.rect(ox+MARGIN*sc,secTop*sc,LABEL_W*sc-2,sectionH*sc); ctx.clip();
+      ctx.fillStyle=`rgba(${rgb.r},${rgb.g},${rgb.b},.95)`;
+      ctx.font=`600 ${Math.max(4,Math.min(sc*.7,10))}px 'Instrument Sans',sans-serif`;
+      ctx.fillText(h.name, ox+MARGIN*sc+1, (secTop+boxSize*.72)*sc); ctx.restore();
+      for (let d=0; d<days; d++) {
+        const row=Math.floor(d/dpr2), col=d%dpr2;
+        const bx=ox+(MARGIN+LABEL_W+col*(boxSize+gap))*sc, by=(secTop+row*(boxSize+gap))*sc, bs=boxSize*sc;
+        drawBox(ctx, bx, by, bs, bs, `rgba(${rgb.r},${rgb.g},${rgb.b},.2)`, `rgba(${rgb.r},${rgb.g},${rgb.b},.7)`, .8);
+      }
+    });
+  } else {
+    const colW=Math.max(1,Math.floor((effTW-MARGIN*2-(habits.length-1)*gap)/habits.length));
+    habits.forEach((h,hi) => {
+      const rgb=hexToRgb(h.color), bx=ox+(MARGIN+hi*(colW+gap))*sc;
+      ctx.save(); ctx.beginPath(); ctx.rect(bx,(startY-1.2)*sc,colW*sc,sc*1.2); ctx.clip();
+      ctx.fillStyle=`rgba(${rgb.r},${rgb.g},${rgb.b},.95)`;
+      ctx.font=`600 ${Math.max(4,Math.min(sc*.65,9))}px 'Instrument Sans',sans-serif`;
+      ctx.fillText(h.name, bx+sc*.4+1,(startY-.35)*sc); ctx.restore();
+    });
+    for (let d=0; d<days; d++) {
+      habits.forEach((h,hi) => {
+        const rgb=hexToRgb(h.color), bx=ox+(MARGIN+hi*(colW+gap))*sc, by=(startY+d*(boxSize+gap))*sc;
+        drawBox(ctx, bx, by, colW*sc, boxSize*sc, `rgba(${rgb.r},${rgb.g},${rgb.b},.2)`, `rgba(${rgb.r},${rgb.g},${rgb.b},.65)`, .7);
+      });
+      if (showLbls&&sc>=6) {
+        ctx.fillStyle='rgba(100,80,60,.75)'; ctx.font=`bold ${Math.max(3,sc*.45)}px 'Instrument Sans',sans-serif`;
+        ctx.textAlign='right'; ctx.fillText(dayLabels[d], ox+(MARGIN-.2)*sc, (startY+d*(boxSize+gap))*sc+boxSize*sc*.72); ctx.textAlign='left';
+      }
+    }
+  }
+}
+
+function spreadDrawCalendar(ctx, sc, tW, tH, ox, month, year) {
+  const daysInMonth = getDaysInMonth(month, year);
+  const firstDay    = new Date(year, month-1, 1).getDay();
+  const MARGIN = 1;
+  const DAY_ABBR = ['S','M','T','W','T','F','S'];
+  const roseRgb = hexToRgb('#b85470');
+
+  // Title band
+  ctx.fillStyle = 'rgba(58,53,48,.07)';
+  ctx.fillRect(ox, 0, tW*sc, 3*sc);
+  ctx.fillStyle = '#3a3530';
+  ctx.font = `bold italic ${Math.max(8,sc*1.4)}px 'Playfair Display',Georgia,serif`;
+  ctx.fillText(`${MONTH_NAMES[month]} ${year}`, ox+MARGIN*sc+2, 2*sc);
+
+  // Layout
+  const calW    = tW - MARGIN*2;
+  const cellGap = 0.4;
+  const cellW   = (calW - cellGap*6) / 7;
+  const headerY = 3.2, headerH = 1.6;
+  const daysStartY = headerY + headerH + 0.4;
+  const availH  = tH - daysStartY - MARGIN;
+  const cellH   = Math.max(2.5, (availH - cellGap*5) / 6);
+
+  // Day header band
+  ctx.fillStyle = 'rgba(58,53,48,.1)';
+  ctx.fillRect(ox+MARGIN*sc, headerY*sc, calW*sc, headerH*sc);
+  DAY_ABBR.forEach((d,i) => {
+    const isWknd = i===0||i===6;
+    const cx = ox+(MARGIN + i*(cellW+cellGap))*sc + cellW*sc/2;
+    ctx.fillStyle = isWknd ? `rgba(${roseRgb.r},${roseRgb.g},${roseRgb.b},.85)` : '#3a3530';
+    ctx.textAlign = 'center';
+    ctx.font = `600 ${Math.max(4,sc*.62)}px 'Instrument Sans',sans-serif`;
+    ctx.fillText(d, cx, (headerY + headerH*0.72)*sc);
+    ctx.textAlign = 'left';
+  });
+
+  // Date cells
+  for (let d=1; d<=daysInMonth; d++) {
+    const dow  = (firstDay+d-1)%7;
+    const week = Math.floor((firstDay+d-1)/7);
+    const isWknd = dow===0||dow===6;
+    const bx = ox+(MARGIN + dow*(cellW+cellGap))*sc;
+    const by = (daysStartY + week*(cellH+cellGap))*sc;
+    const bw = cellW*sc, bh = cellH*sc;
+    const r  = Math.max(1.5, Math.min(bw,bh)*0.14);
+
+    ctx.fillStyle = isWknd
+      ? `rgba(${roseRgb.r},${roseRgb.g},${roseRgb.b},.09)`
+      : 'rgba(255,255,255,.8)';
+    ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, r); ctx.fill();
+
+    ctx.strokeStyle = isWknd
+      ? `rgba(${roseRgb.r},${roseRgb.g},${roseRgb.b},.35)`
+      : 'rgba(180,168,155,.7)';
+    ctx.lineWidth = .7;
+    ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, r); ctx.stroke();
+
+    if (sc >= 5) {
+      ctx.fillStyle = isWknd ? `rgba(${roseRgb.r},${roseRgb.g},${roseRgb.b},.9)` : '#3a3530';
+      ctx.font = `${Math.max(4,sc*.62)}px 'DM Mono',monospace`;
+      ctx.fillText(d, bx+sc*.3, by+sc*.88);
+    }
+  }
+}
+
+// ════════════════════════
 // INIT
 // ════════════════════════
 window.onload = () => {
@@ -2327,6 +3005,19 @@ window.onload = () => {
 
   // ensure there is always at least one state in history
   if (historyIndex < 0) { calculate(); calculateHabit(); pushHistory(); }
+
+  initCollColors();
+  calculateCollection();
+  buildSpread();
+
+  // init calendar selects to current month
+  const nowM = new Date();
+  ['spreadLeftMonth','spreadRightMonth'].forEach(id => {
+    const el = gv(id); if (el) el.value = nowM.getMonth()+1;
+  });
+  ['spreadLeftYear','spreadRightYear'].forEach(id => {
+    const el = gv(id); if (el) el.value = nowM.getFullYear();
+  });
 };
 </script>
 </body>
